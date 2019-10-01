@@ -34,7 +34,6 @@ import (
 	"github.com/containerd/containerd/pkg/progress"
 	"github.com/containerd/containerd/remotes"
 	"github.com/docker/docker/errdefs"
-	"github.com/docker/go-units"
 	digest "github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
@@ -101,7 +100,7 @@ outer:
 					info, err := cs.Info(ctx, j.Digest)
 					if err != nil {
 						if !errdefs.IsNotFound(err) {
-							log.G(ctx).WithError(err).Errorf("failed to get content info")
+							//log.G(ctx).WithError(err).Errorf("failed to get content info")
 							continue outer
 						} else {
 							statuses[key] = StatusInfo{
@@ -218,44 +217,6 @@ func Display(w io.Writer, statuses []StatusInfo, start time.Time) {
 	var total int64
 	for _, status := range statuses {
 		total += status.Offset
-		switch status.Status {
-		case "downloading", "uploading":
-			var bar progress.Bar
-			if status.Total > 0.0 {
-				bar = progress.Bar(float64(status.Offset) / float64(status.Total))
-			}
-			fmt.Fprintf(w, "%s:\t%s\t%40r\t%8.8s/%s\t\n",
-				status.Ref,
-				status.Status,
-				bar,
-				progress.Bytes(status.Offset), progress.Bytes(status.Total))
-		case "resolving", "waiting":
-			bar := progress.Bar(0.0)
-			fmt.Fprintf(w, "%s:\t%s\t%40r\t\n",
-				status.Ref,
-				status.Status,
-				bar)
-		case "done":
-			if status.Total > 0.0 {
-				bar := progress.Bar(1.0)
-				duration := status.UpdatedAt.Sub(status.StartedAt)
-				fmt.Fprintf(w, "%s:\t%s\t%40r\t%s\t%s\t%s\t\n",
-					status.Ref,
-					status.Status,
-					bar,
-					progress.Bytes(status.Total),
-					units.HumanDuration(duration),
-					progress.NewBytesPerSecond(status.Total, duration))
-				continue
-			}
-			fallthrough
-		default:
-			bar := progress.Bar(1.0)
-			fmt.Fprintf(w, "%s:\t%s\t%40r\t\n",
-				status.Ref,
-				status.Status,
-				bar)
-		}
 	}
 
 	fmt.Fprintf(w, "elapsed: %-4.1fs\ttotal: %7.6v\t(%v)\t\n",
